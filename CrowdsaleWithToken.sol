@@ -192,7 +192,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
 
     // Divide up reward and make it accesible for withdraw
     function divideUpReward(uint inDays) rewardTimePast onlyOwner external payable {
-        require(inDays >= 15 && inDays =< 45);
+        require(inDays >= 15 && inDays <= 45);
         lastDivideRewardTime = now;
         rewardDays = inDays;
         totalReward = this.balance;
