@@ -112,7 +112,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
 
     // Fix for the ERC20 short address attack
     modifier rewardTimePast() {
-        require(now > lastDivideRewardTime + rewardDays);
+        require(now > lastDivideRewardTime + rewardDays * 1 days);
         _;
     }
 
