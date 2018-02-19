@@ -142,7 +142,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
     function transferFrom(address _from, address _to, uint256 _value) onlyPayloadSize(3 * 32) unblocked public returns (bool) {
         beforeBalanceChanges(_from);
         beforeBalanceChanges(_to);
-        var _allowance = allowed[_from][msg.sender];
+        uint256 _allowance = allowed[_from][msg.sender];
         balances[_to] = balances[_to].add(_value);
         balances[_from] = balances[_from].sub(_value);
         allowed[_from][msg.sender] = _allowance.sub(_value);
@@ -220,8 +220,9 @@ contract RENTCoin is DividendToken {
 
     function RENTCoin(uint256 initialSupply, uint unblockTime) public {
         totalSupply = initialSupply;
-        balances[owner] = initialSupply;
+        balances[owner] = totalSupply;
         blockedUntil = unblockTime;
+		Transfer(this, owner, totalSupply);
     }
 
     function manualTransfer(address _to, uint256 _value) onlyPayloadSize(2 * 32) onlyOwner public returns (bool) {
@@ -232,21 +233,21 @@ contract RENTCoin is DividendToken {
 contract TimingCrowdsale {
 
     // Date of start pre-ICO and ICO.
-    uint public constant preICOstartTime = 1517461200; // start at Thursday, February 1, 2018 5:00:00 AM
-    uint public constant ICOstartTime =    1518670800; // start at Thursday, February 15, 2018 5:00:00 AM
-    uint public constant ICOendTime =      1521090000; // end at Thursday, March 15, 2018 5:00:00 AM
+    uint public constant preICOstartTime = 1519880400; // start at Thursday, March 1, 2018 5:00:00 AM
+    uint public constant ICOstartTime =    preICOstartTime + 14 days; // start at Thursday, March 15, 2018 5:00:00 AM
+    uint public constant ICOendTime =      ICOstartTime + 31 days; // end at Thursday, April 15, 2018 5:00:00 AM
 
     function currentTime() internal view returns (uint) {
         return now;
     }
 
     function isPreICO() public view returns (bool) {
-        var curTime = currentTime();
+        uint curTime = currentTime();
         return curTime < ICOstartTime && curTime >= preICOstartTime;
     }
 
     function isICO() public view returns (bool) {
-        var curTime = currentTime();
+        uint curTime = currentTime();
         return curTime < ICOendTime && curTime >= ICOstartTime;
     }
 
@@ -269,7 +270,7 @@ contract BonusCrowdsale is TimingCrowdsale {
         return bonus;
     }
 
-    function getAmountBonus(uint256 amount) public view returns (uint) {
+    function getAmountBonus(uint256 amount) public pure returns (uint) {
         if (amount >= 25 ether) {
             return 15;
         }
@@ -360,7 +361,7 @@ contract Crowdsale is RefundableCrowdsale {
     uint256 public constant bountyTokens =   15000000 * 10**18; // bounty amount
     uint256 public constant softCapTokens =  6000000 * 10**18; // soft cap
 
-    uint public constant unblockTokenTime = 1519880400; // end at Thursday, March 1, 2018 5:00:00 AM
+    uint public constant unblockTokenTime = preICOstartTime + 31 days; // end at Thursday, April 1, 2018 5:00:00 AM
 
     RENTCoin public token;
 
@@ -454,7 +455,7 @@ contract Crowdsale is RefundableCrowdsale {
     }
 
     function transferTokensTo(address to, uint256 givenTokens) internal returns (uint256) {
-        var providedTokens = givenTokens;
+        uint256 providedTokens = givenTokens;
         if (givenTokens > leftTokens) {
             providedTokens = leftTokens;
         }
