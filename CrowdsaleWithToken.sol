@@ -357,9 +357,9 @@ contract Crowdsale is RefundableCrowdsale {
     enum State { ICO, REFUND, DONE }
     State public state = State.ICO;
 
-    uint256 public constant maxTokenAmount = 75000000 * 10**18; // max minting
-    uint256 public constant bountyTokens =   15000000 * 10**18; // bounty amount
-    uint256 public constant softCapTokens =  6000000 * 10**18; // soft cap
+    uint256 public constant maxTokenAmount = 75e24; // max minting
+    uint256 public constant bountyTokens =   15e24; // bounty amount
+    uint256 public constant softCapTokens =  5e23; 	// soft cap
 
     uint public constant unblockTokenTime = preICOstartTime + 31 days; // end at Thursday, April 1, 2018 5:00:00 AM
 
@@ -374,7 +374,7 @@ contract Crowdsale is RefundableCrowdsale {
 
     uint256 public constant rateToEther = 1000; // rate to ether, how much tokens gives to 1 ether
 
-    uint256 public constant minAmountForDeal = 10**16; // 0.01 ETH
+    uint256 public constant minAmountForDeal = 1e16; // 0.01 ETH
 
     uint256 public soldTokens = 0;
 
