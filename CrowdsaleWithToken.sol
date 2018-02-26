@@ -1,5 +1,8 @@
 pragma solidity ^0.4.18;
 
+// Original code of smart contract on github: 
+
+// Standart libary from "Open Zeppelin"
 library SafeMath {
 
     function mul(uint256 a, uint256 b) internal constant returns (uint256) {
@@ -28,6 +31,7 @@ library SafeMath {
 
 }
 
+// Standart contract from "Open Zeppelin"
 contract ERC20Basic {
     uint256 public totalSupply;
 
@@ -38,6 +42,7 @@ contract ERC20Basic {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
+// Standart contract from "Open Zeppelin"
 contract ERC20 is ERC20Basic {
     function allowance(address owner, address spender) constant public returns (uint256);
 
@@ -48,6 +53,7 @@ contract ERC20 is ERC20Basic {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
+// Describing contract with owner.
 contract Owned {
 
     address public owner;
@@ -75,8 +81,10 @@ contract Owned {
     }
 }
 
+// Describing Bloccking modifier which founds on time block.
 contract Blocked {
 
+	// Time till modifier block
     uint public blockedUntil;
 
     modifier unblocked {
@@ -85,6 +93,7 @@ contract Blocked {
     }
 }
 
+// contract which discribes contract of token which founds on ERC20 and implement balanceOf function.
 contract BalancingToken is ERC20 {
     mapping (address => uint256) public balances;      //!< array of all balances
 
@@ -93,15 +102,21 @@ contract BalancingToken is ERC20 {
     }
 }
 
+// Contract for dividend tokens. This contract describes implementation for tokens which can be used for dividends
 contract DividendToken is BalancingToken, Blocked, Owned {
 
     using SafeMath for uint256;
 
+	// Event for dividends when somebody takes dividends it will raised.
     event DividendReceived(address indexed dividendReceiver, uint256 dividendValue);
 
+	// mapping for alloweds and amounts.
     mapping (address => mapping (address => uint256)) public allowed;
 
+	// full reward amount for one round.
+	// this value is defined by ether amount on DividendToken contract on moment when dividend payments starts.
     uint public totalReward;
+	// time when last time dividends started pay.
     uint public lastDivideRewardTime;
 
     // Fix for the ERC20 short address attack
@@ -110,26 +125,31 @@ contract DividendToken is BalancingToken, Blocked, Owned {
         _;
     }
 
-    // Fix for the ERC20 short address attack
+	// This modifier checkes if reward payment is over.
     modifier rewardTimePast() {
         require(now > lastDivideRewardTime + rewardDays * 1 days);
         _;
     }
 
+	// Structure is for Token holder which contains information about all token holders with balances and times.
     struct TokenHolder {
         uint256 balance;
         uint    balanceUpdateTime;
         uint    rewardWithdrawTime;
     }
 
+	// mapping for token holders.
     mapping(address => TokenHolder) holders;
 
+	// the number of days for rewards.
     uint public rewardDays = 0;
 
+	// standard method for transfer from ERC20.
     function transfer(address _to, uint256 _value) onlyPayloadSize(2 * 32) unblocked public returns (bool) {
         return transferSimple(_to, _value);
     }
 
+	// internal implementation for transfer with recounting rewards.
     function transferSimple(address _to, uint256 _value) internal returns (bool) {
         beforeBalanceChanges(msg.sender);
         beforeBalanceChanges(_to);
@@ -139,6 +159,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
         return true;
     }
 
+	// standard method for transferFrom from ERC20. 
     function transferFrom(address _from, address _to, uint256 _value) onlyPayloadSize(3 * 32) unblocked public returns (bool) {
         beforeBalanceChanges(_from);
         beforeBalanceChanges(_to);
@@ -150,6 +171,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
         return true;
     }
 
+	// standard method for transferFrom from ERC20. 
     function approve(address _spender, uint256 _value) onlyPayloadSize(2 * 32) unblocked public returns (bool) {
         require((_value == 0) || (allowed[msg.sender][_spender] == 0));
         allowed[msg.sender][_spender] = _value;
@@ -157,10 +179,13 @@ contract DividendToken is BalancingToken, Blocked, Owned {
         return true;
     }
 
+	// standard method for transferFrom from ERC20. 
     function allowance(address _owner, address _spender) onlyPayloadSize(2 * 32) unblocked constant public returns (uint256 remaining) {
         return allowed[_owner][_spender];
     }
 
+	// THis method returns the amount of caller's reward.
+	// Caller gets ether which should be given to him.
     function reward() constant public returns (uint256) {
         if (holders[msg.sender].rewardWithdrawTime >= lastDivideRewardTime) {
             return 0;
@@ -174,6 +199,8 @@ contract DividendToken is BalancingToken, Blocked, Owned {
         return totalReward.mul(balance).div(totalSupply);
     }
 
+	// This method shoud be called when caller wants take dividends reward.
+	// Caller gets ether which should be given to him.
     function withdrawReward() public returns (uint256) {
         uint256 rewardValue = reward();
         if (rewardValue == 0) {
@@ -191,17 +218,20 @@ contract DividendToken is BalancingToken, Blocked, Owned {
     }
 
     // Divide up reward and make it accesible for withdraw
+	// Need to provide the number of days for reward. It can be less then 15 days and more then 45 days.
     function divideUpReward(uint inDays) rewardTimePast onlyOwner external payable {
         require(inDays >= 15 && inDays <= 45);
         lastDivideRewardTime = now;
         rewardDays = inDays;
         totalReward = this.balance;
     }
-
+	
+	// Take left reward after reward period.
     function withdrawLeft() rewardTimePast onlyOwner external {
         require(msg.sender.call.gas(3000000).value(this.balance)());
     }
 
+	// recount reward of somebody.
     function beforeBalanceChanges(address _who) public {
         if (holders[_who].balanceUpdateTime <= lastDivideRewardTime) {
             holders[_who].balanceUpdateTime = now;
@@ -210,6 +240,7 @@ contract DividendToken is BalancingToken, Blocked, Owned {
     }
 }
 
+// Final contract for RENT coin.
 contract RENTCoin is DividendToken {
 
     string public constant name = "RentAway Coin";
@@ -225,11 +256,14 @@ contract RENTCoin is DividendToken {
 		Transfer(this, owner, totalSupply);
     }
 
+	// Uses for overwork manual Blocked contract for ICO time.
+	// After ICO it is not needed.
     function manualTransfer(address _to, uint256 _value) onlyPayloadSize(2 * 32) onlyOwner public returns (bool) {
         return transferSimple(_to, _value);
     }
 }
 
+// Contract implements all time and intervalse for crowdsale. 
 contract TimingCrowdsale {
 
     // Date of start pre-ICO and ICO.
@@ -260,6 +294,7 @@ contract TimingCrowdsale {
     }
 }
 
+// Contract implements bonuses for crowdsale.
 contract BonusCrowdsale is TimingCrowdsale {
 
     function getBonus(uint256 amount) public view returns (uint) {
@@ -281,6 +316,7 @@ contract BonusCrowdsale is TimingCrowdsale {
     }
 }
 
+// Contract for manual sending. Implements how to be count amounts in all additional currencies.
 contract ManualSendingCrowdsale is BonusCrowdsale, Owned {
     using SafeMath for uint256;
 
@@ -311,6 +347,7 @@ contract ManualSendingCrowdsale is BonusCrowdsale, Owned {
     function transferTokensTo(address to, uint256 givenTokens) internal returns (uint256);
 }
 
+// Contract implements withdraw rules for crowdsale.
 contract WithdrawCrowdsale is ManualSendingCrowdsale {
 
     function isWithdrawAllowed() public view returns (bool);
@@ -333,12 +370,14 @@ contract WithdrawCrowdsale is ManualSendingCrowdsale {
     }
 }
 
+// Contract implements refund functionality for investors.
 contract RefundableCrowdsale is WithdrawCrowdsale {
 
     event Refunded(address indexed beneficiary, uint256 weiAmount);
 
     mapping (address => uint256) public deposited;
 
+	// The investor should call this function to return ETH if crowdsale will be failed.
     function refund(address investor) external {
         require(isRefundAllowed());
         uint256 depositedValue = deposited[investor];
@@ -350,40 +389,56 @@ contract RefundableCrowdsale is WithdrawCrowdsale {
     function isRefundAllowed() internal view returns (bool);
 }
 
+// THe main contract for crowdsale.
 contract Crowdsale is RefundableCrowdsale {
 
     using SafeMath for uint256;
 
+	// States of sales.
     enum State { ICO, REFUND, DONE }
     State public state = State.ICO;
 
+	// Number of tokens 75,000,000.
     uint256 public constant maxTokenAmount = 75e24; // max minting
+	// Bounty ampunt of tokens 15,000,000.
     uint256 public constant bountyTokens =   15e24; // bounty amount
+	// Softcap for starting withdraw 500,000 tokens.
     uint256 public constant softCapTokens =  5e23; 	// soft cap
 
+	// time until tokens will be blocked.
     uint public constant unblockTokenTime = preICOstartTime + 31 days; // end at Thursday, April 1, 2018 5:00:00 AM
 
+	// RTW Token.
     RENTCoin public token;
 
+	// How many tokens left for sale.
     uint256 public leftTokens = 0;
 
+	// ETH amount which was received.
     uint256 public totalAmount = 0;
+	// Number of sales.
     uint public transactionCounter = 0;
 
+	// Bounty was paid or not.
     bool public bonusesPayed = false;
 
+	// The price to ether.
     uint256 public constant rateToEther = 1000; // rate to ether, how much tokens gives to 1 ether
 
+	// min amount in ether to create a deal.
     uint256 public constant minAmountForDeal = 1e16; // 0.01 ETH
 
+	// number of sold tokens.
     uint256 public soldTokens = 0;
 
+	// check is it possiable to buy.
     modifier canBuy() {
         require(!isFinished());
         require(isPreICO() || isICO());
         _;
     }
 
+	// check on min amount for the deal.
     modifier minPayment() {
         require(msg.value >= minAmountForDeal);
         _;
@@ -395,18 +450,22 @@ contract Crowdsale is RefundableCrowdsale {
         addCurrencyInternal(0); // add BTC
     }
 
+	// check ICO is finished
     function isFinished() public view returns (bool) {
         return isICOFinished() || (leftTokens == 0 && (state == State.ICO || state == State.DONE));
     }
 
+	// Is withdraw money from smart contract allowed.
     function isWithdrawAllowed() public view returns (bool) {
         return soldTokens >= softCapTokens;
     }
-
+	
+	// is refind money for the inverstors is allowed.
     function isRefundAllowed() internal view returns (bool) {
         return state == State.REFUND;
     }
-
+	
+	// function for buy RENT tokens. Calls when somebody send ETH to contract.
     function() external canBuy minPayment payable {
         address investor = msg.sender;
         uint256 amount = msg.value;
@@ -426,10 +485,12 @@ contract Crowdsale is RefundableCrowdsale {
         }
     }
 
+	// Manual sending tokens for the investors in addtional currencies;
     function manualTransferTokensTo(address to, uint256 givenTokens, uint currency, uint256 amount) external onlyOwner canBuy returns (uint256) {
         return manualTransferTokensToInternal(to, givenTokens, currency, amount);
     }
 
+	// Check state of crowdsale when time is over.
     function finishCrowdsale() external {
         require(isFinished());
         require(state == State.ICO);
@@ -441,6 +502,7 @@ contract Crowdsale is RefundableCrowdsale {
         }
     }
 
+	// give bounty and all left tokens to owner.
     function takeBounty() external onlyOwner {
         require(state == State.DONE);
         require(now > ICOendTime);
